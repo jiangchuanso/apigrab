@@ -1,0 +1,36 @@
+target/
+*.class
+.idea/
+*.iml
+
+# Eclipse IDE project files (untracked, generated)
+.classpath
+.factorypath
+.project
+.settings/
+
+# VS Code
+.vscode/
+.DS_Store
+*.log
+.omo/
+.zcode/
+.env
+.env.template
+__pycache__/
+
+# pi
+.pi-subagents
+.opencode
+.cloude
+.codex
+.workbuddy
+.sisyphus
+
+# nodejs
+/apigrab-web-ui/dist/
+node_modules/
+
+# Windows reserved device name accidentally created by `> nul` under a Unix shell
+nul
+

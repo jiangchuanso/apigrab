@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.gitee.apigrab.persistence.mapper.SystemUserMapper">
+    <resultMap id="BaseResultMap" type="com.gitee.apigrab.persistence.entity.SystemUserEntity">
+        <id column="id" property="id"/>
+        <result column="username" property="username"/>
+        <result column="password" property="password"/>
+        <result column="real_name" property="realName"/>
+        <result column="email" property="email"/>
+        <result column="address" property="address"/>
+        <result column="role" property="role"/>
+        <result column="status" property="status" typeHandler="com.gitee.apigrab.persistence.handler.EnableStatusTypeHandler"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="BaseColumns">
+        id, username, password, real_name, email, address, role, status, create_time, update_time
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="BaseColumns"/> FROM APIGRAB_SYSTEM_USER WHERE id = #{id}
+    </select>
+
+    <select id="selectByUsername" resultMap="BaseResultMap">
+        SELECT <include refid="BaseColumns"/> FROM APIGRAB_SYSTEM_USER WHERE username = #{username}
+    </select>
+
+    <select id="selectList" resultMap="BaseResultMap">
+        SELECT <include refid="BaseColumns"/> FROM APIGRAB_SYSTEM_USER
+        <where>
+            <if test="username != null and username != ''">AND username LIKE CONCAT('%', #{username}, '%')</if>
+            <if test="role != null">AND role = #{role}</if>
+            <if test="status != null">AND status = #{status, typeHandler=com.gitee.apigrab.persistence.handler.EnableStatusTypeHandler}</if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO APIGRAB_SYSTEM_USER (username, password, real_name, email, address, role, status)
+        VALUES (#{username}, #{password}, #{realName}, #{email}, #{address}, #{role},
+            #{status, typeHandler=com.gitee.apigrab.persistence.handler.EnableStatusTypeHandler})
+    </insert>
+
+    <update id="updateById">
+        UPDATE APIGRAB_SYSTEM_USER
+        <set>
+            <if test="realName != null">real_name = #{realName},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="address != null">address = #{address},</if>
+            <if test="role != null">role = #{role},</if>
+            <if test="status != null">status = #{status, typeHandler=com.gitee.apigrab.persistence.handler.EnableStatusTypeHandler},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <update id="updatePassword">
+        UPDATE APIGRAB_SYSTEM_USER SET password = #{password} WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM APIGRAB_SYSTEM_USER WHERE id = #{id}
+    </delete>
+
+    <select id="countEnabledByRole" resultType="int">
+        SELECT COUNT(*) FROM APIGRAB_SYSTEM_USER WHERE role = #{role} AND status = 1
+    </select>
+</mapper>

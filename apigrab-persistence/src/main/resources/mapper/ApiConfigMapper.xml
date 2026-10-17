@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.gitee.apigrab.persistence.mapper.ApiConfigMapper">
+    <resultMap id="BaseResultMap" type="com.gitee.apigrab.persistence.entity.ApiConfigEntity">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="url" property="url"/>
+        <result column="method" property="method"/>
+        <result column="headers" property="headers" typeHandler="com.gitee.apigrab.persistence.handler.StringMapTypeHandler"/>
+        <result column="query_params" property="queryParams" typeHandler="com.gitee.apigrab.persistence.handler.StringMapTypeHandler"/>
+        <result column="body_type" property="bodyType"/>
+        <result column="body_content" property="bodyContent"/>
+        <result column="connect_timeout" property="connectTimeout"/>
+        <result column="read_timeout" property="readTimeout"/>
+        <!-- 认证改为引用：auth_config_id 为持久化列；auth_type/auth_config/auth_config_name
+             由左连接 APIGRAB_AUTH_CONFIG 派生（只读），供认证链与列表展示使用。 -->
+        <result column="auth_config_id" property="authConfigId"/>
+        <result column="auth_type" property="authType"/>
+        <result column="auth_config" property="authConfig" typeHandler="com.gitee.apigrab.persistence.handler.AuthConfigTypeHandler"/>
+        <result column="auth_config_name" property="authConfigName"/>
+        <result column="resp_type" property="respType"/>
+        <result column="data_path" property="dataPath"/>
+        <result column="page_enabled" property="pageEnabled"/>
+        <result column="page_config" property="pageConfig" typeHandler="com.gitee.apigrab.persistence.handler.PageConfigTypeHandler"/>
+        <result column="detail_config" property="detailConfig" typeHandler="com.gitee.apigrab.persistence.handler.DetailConfigTypeHandler"/>
+        <result column="transform_type" property="transformType"/>
+        <result column="convert_script" property="convertScript"/>
+        <result column="enable_multilines" property="enableMultilines"/>
+        <result column="sample_data" property="sampleData" typeHandler="com.gitee.apigrab.persistence.handler.ObjectMapTypeHandler"/>
+        <result column="status" property="status" typeHandler="com.gitee.apigrab.persistence.handler.EnableStatusTypeHandler"/>
+        <result column="remark" property="remark"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="ref_count" property="refCount"/>
+    </resultMap>
+
+    <!-- 认证配置字段用别�?a.*，避免与 c.* 的同名列冲突�?-->
+    <sql id="SelectColumns">
+        c.id, c.name, c.url, c.method, c.headers, c.query_params, c.body_type, c.body_content,
+        c.connect_timeout, c.read_timeout,
+        c.auth_config_id,
+        a.auth_type AS auth_type, a.auth_config AS auth_config, a.name AS auth_config_name,
+        c.resp_type, c.data_path, c.page_enabled, c.page_config,
+        c.detail_config,
+        c.transform_type, c.convert_script, c.enable_multilines, c.sample_data, c.status, c.remark,
+        c.create_time, c.update_time,
+        (SELECT COUNT(*) FROM APIGRAB_COLLECT_TASK t WHERE t.api_config_id = c.id) AS ref_count
+    </sql>
+
+    <sql id="FromJoin">
+        FROM APIGRAB_API_CONFIG c LEFT JOIN APIGRAB_AUTH_CONFIG a ON a.id = c.auth_config_id
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="SelectColumns"/> <include refid="FromJoin"/> WHERE c.id = #{id}
+    </select>
+
+    <!-- 名称唯一性判重专用：等值匹配（非 LIKE）。
+         表使用 MySQL 默认排序规则（大小写不敏感），故此处天然忽略大小写，
+         与服务层的判重结论一致——不得改用 Java 层字符串比较。 -->
+    <select id="selectByName" resultMap="BaseResultMap">
+        SELECT <include refid="SelectColumns"/> <include refid="FromJoin"/> WHERE c.name = #{name}
+    </select>
+
+    <select id="selectList" resultMap="BaseResultMap">
+        SELECT <include refid="SelectColumns"/> <include refid="FromJoin"/>
+        <where>
+            <if test="name != null and name != ''">AND c.name LIKE CONCAT('%', #{name}, '%')</if>
+            <if test="status != null">AND c.status = #{status, typeHandler=com.gitee.apigrab.persistence.handler.EnableStatusTypeHandler}</if>
+        </where>
+        ORDER BY c.id DESC
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO APIGRAB_API_CONFIG (name, url, method, headers, query_params, body_type, body_content,
+            connect_timeout, read_timeout,
+            auth_config_id, resp_type, data_path, page_enabled, page_config, detail_config,
+            transform_type, convert_script, enable_multilines, sample_data, status, remark)
+        VALUES (#{name}, #{url}, #{method},
+            #{headers, typeHandler=com.gitee.apigrab.persistence.handler.StringMapTypeHandler},
+            #{queryParams, typeHandler=com.gitee.apigrab.persistence.handler.StringMapTypeHandler},
+            #{bodyType}, #{bodyContent}, #{connectTimeout}, #{readTimeout}, #{authConfigId},
+            #{respType}, #{dataPath}, #{pageEnabled},
+            #{pageConfig, typeHandler=com.gitee.apigrab.persistence.handler.PageConfigTypeHandler},
+            #{detailConfig, typeHandler=com.gitee.apigrab.persistence.handler.DetailConfigTypeHandler},
+            #{transformType}, #{convertScript}, #{enableMultilines},
+            #{sampleData, typeHandler=com.gitee.apigrab.persistence.handler.ObjectMapTypeHandler},
+            #{status, typeHandler=com.gitee.apigrab.persistence.handler.EnableStatusTypeHandler}, #{remark})
+    </insert>
+
+    <!-- auth_config_id 无条件写入：允许将「无认证」显式保存为 NULL。
+         因此 updateById 仅用于完整保存；部分更新（状态切换、样例缓存）必须携带
+         当前 authConfigId，或改用专用方法，避免误清认证引用。 -->
+    <update id="updateById">
+        UPDATE APIGRAB_API_CONFIG
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="url != null">url = #{url},</if>
+            <if test="method != null">method = #{method},</if>
+            <if test="headers != null">headers = #{headers, typeHandler=com.gitee.apigrab.persistence.handler.StringMapTypeHandler},</if>
+            <if test="queryParams != null">query_params = #{queryParams, typeHandler=com.gitee.apigrab.persistence.handler.StringMapTypeHandler},</if>
+            <if test="bodyType != null">body_type = #{bodyType},</if>
+            <if test="bodyContent != null">body_content = #{bodyContent},</if>
+            <if test="connectTimeout != null">connect_timeout = #{connectTimeout},</if>
+            <if test="readTimeout != null">read_timeout = #{readTimeout},</if>
+            auth_config_id = #{authConfigId},
+            <if test="respType != null">resp_type = #{respType},</if>
+            <if test="dataPath != null">data_path = #{dataPath},</if>
+            <if test="pageEnabled != null">page_enabled = #{pageEnabled},</if>
+            <if test="pageConfig != null">page_config = #{pageConfig, typeHandler=com.gitee.apigrab.persistence.handler.PageConfigTypeHandler},</if>
+            <if test="detailConfig != null">detail_config = #{detailConfig, typeHandler=com.gitee.apigrab.persistence.handler.DetailConfigTypeHandler},</if>
+            <if test="transformType != null">transform_type = #{transformType},</if>
+            <if test="convertScript != null">convert_script = #{convertScript},</if>
+            <if test="enableMultilines != null">enable_multilines = #{enableMultilines},</if>
+            <if test="sampleData != null">sample_data = #{sampleData, typeHandler=com.gitee.apigrab.persistence.handler.ObjectMapTypeHandler},</if>
+            <if test="status != null">status = #{status, typeHandler=com.gitee.apigrab.persistence.handler.EnableStatusTypeHandler},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM APIGRAB_API_CONFIG WHERE id = #{id}
+    </delete>
+
+    <select id="selectEnabled" resultMap="BaseResultMap">
+        SELECT <include refid="SelectColumns"/> <include refid="FromJoin"/> WHERE c.status = 1
+    </select>
+</mapper>

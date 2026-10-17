@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.gitee.apigrab.persistence.mapper.CollectTaskMapper">
+    <resultMap id="BaseResultMap" type="com.gitee.apigrab.persistence.entity.CollectTaskEntity">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="api_config_id" property="apiConfigId"/>
+        <result column="api_config_name" property="apiConfigName"/>
+        <result column="datasource_id" property="datasourceId"/>
+        <result column="datasource_name" property="datasourceName"/>
+        <result column="datasource_db_type" property="datasourceDbType"/>
+        <result column="target_schema" property="targetSchema"/>
+        <result column="target_table" property="targetTable"/>
+        <result column="write_mode" property="writeMode"/>
+        <result column="merge_keys" property="mergeKeys"/>
+        <result column="auto_create_table" property="autoCreateTable"/>
+        <result column="batch_size" property="batchSize"/>
+        <result column="retry_times" property="retryTimes"/>
+        <result column="timeout_ms" property="timeoutMs"/>
+        <result column="alarm_enabled" property="alarmEnabled"/>
+        <result column="schedule_type" property="scheduleType"/>
+        <result column="cron_expression" property="cronExpression"/>
+        <result column="status" property="status" typeHandler="com.gitee.apigrab.persistence.handler.TaskStatusTypeHandler"/>
+        <result column="remark" property="remark"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="BaseColumns">
+        id, name, api_config_id, datasource_id, target_schema, target_table, write_mode, merge_keys,
+        auto_create_table, batch_size, retry_times, timeout_ms, alarm_enabled, schedule_type, cron_expression,
+        status, remark, create_time, update_time
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="BaseColumns"/> FROM APIGRAB_COLLECT_TASK WHERE id = #{id}
+    </select>
+
+    <!-- 名称唯一性判重专用：等值匹配（非 LIKE）。不取关联列（api_config_name 等），
+         判重只需要 id 与命中的事实。表使用 MySQL 默认排序规则（大小写不敏感），
+         故此处天然忽略大小写，不得改用 Java 层字符串比较。 -->
+    <select id="selectByName" resultMap="BaseResultMap">
+        SELECT <include refid="BaseColumns"/> FROM APIGRAB_COLLECT_TASK WHERE name = #{name}
+    </select>
+
+    <select id="selectList" resultMap="BaseResultMap">
+        SELECT t.id, t.name, t.api_config_id, a.name AS api_config_name, t.datasource_id,
+               d.name AS datasource_name, d.db_type AS datasource_db_type,
+               t.target_schema, t.target_table,
+               t.write_mode, t.merge_keys, t.auto_create_table, t.batch_size, t.retry_times, t.timeout_ms, t.alarm_enabled,
+               t.schedule_type, t.cron_expression, t.status, t.remark, t.create_time, t.update_time
+        FROM APIGRAB_COLLECT_TASK t
+        LEFT JOIN APIGRAB_API_CONFIG a ON t.api_config_id = a.id
+        LEFT JOIN APIGRAB_DATASOURCE_CONFIG d ON t.datasource_id = d.id
+        <where>
+            <if test="name != null and name != ''">AND t.name LIKE CONCAT('%', #{name}, '%')</if>
+            <if test="apiConfigId != null">AND t.api_config_id = #{apiConfigId}</if>
+            <if test="datasourceId != null">AND t.datasource_id = #{datasourceId}</if>
+            <if test="writeMode != null">AND t.write_mode = #{writeMode}</if>
+            <if test="scheduleType != null">AND t.schedule_type = #{scheduleType}</if>
+            <if test="status != null">AND t.status = #{status, typeHandler=com.gitee.apigrab.persistence.handler.TaskStatusTypeHandler}</if>
+        </where>
+        ORDER BY t.id DESC
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO APIGRAB_COLLECT_TASK (name, api_config_id, datasource_id, target_schema, target_table, write_mode, merge_keys,
+            auto_create_table, batch_size, retry_times, timeout_ms, alarm_enabled, schedule_type, cron_expression, status, remark)
+        VALUES (#{name}, #{apiConfigId}, #{datasourceId}, #{targetSchema}, #{targetTable}, #{writeMode}, #{mergeKeys},
+            #{autoCreateTable}, #{batchSize}, #{retryTimes}, #{timeoutMs}, #{alarmEnabled}, #{scheduleType}, #{cronExpression},
+            #{status, typeHandler=com.gitee.apigrab.persistence.handler.TaskStatusTypeHandler}, #{remark})
+    </insert>
+
+    <update id="updateById">
+        UPDATE APIGRAB_COLLECT_TASK
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="apiConfigId != null">api_config_id = #{apiConfigId},</if>
+            <if test="datasourceId != null">datasource_id = #{datasourceId},</if>
+            <if test="targetSchema != null">target_schema = #{targetSchema},</if>
+            <if test="targetTable != null">target_table = #{targetTable},</if>
+            <if test="writeMode != null">write_mode = #{writeMode},</if>
+            <if test="mergeKeys != null">merge_keys = #{mergeKeys},</if>
+            <if test="autoCreateTable != null">auto_create_table = #{autoCreateTable},</if>
+            <if test="batchSize != null">batch_size = #{batchSize},</if>
+            <if test="retryTimes != null">retry_times = #{retryTimes},</if>
+            <if test="timeoutMs != null">timeout_ms = #{timeoutMs},</if>
+            <if test="alarmEnabled != null">alarm_enabled = #{alarmEnabled},</if>
+            <if test="scheduleType != null">schedule_type = #{scheduleType},</if>
+            <if test="cronExpression != null">cron_expression = #{cronExpression},</if>
+            <if test="status != null">status = #{status, typeHandler=com.gitee.apigrab.persistence.handler.TaskStatusTypeHandler},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM APIGRAB_COLLECT_TASK WHERE id = #{id}
+    </delete>
+
+    <select id="selectEnabled" resultMap="BaseResultMap">
+        SELECT <include refid="BaseColumns"/> FROM APIGRAB_COLLECT_TASK WHERE status = 1
+    </select>
+</mapper>

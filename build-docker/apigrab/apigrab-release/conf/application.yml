@@ -1,0 +1,46 @@
+server:
+  port: ${SERVER_PORT:5880}
+
+spring:
+  application:
+    name: apigrab
+  profiles:
+    include: ${DBTYPE:h2}
+  quartz:
+    job-store-type: jdbc
+    jdbc:
+      initialize-schema: always
+    properties:
+      org.quartz.scheduler.instanceName: ApigrabScheduler
+      org.quartz.scheduler.instanceId: AUTO
+      org.quartz.jobStore.class: org.springframework.scheduling.quartz.LocalDataSourceJobStore
+      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
+      org.quartz.jobStore.tablePrefix: QRTZ_
+      org.quartz.jobStore.isClustered: true
+      org.quartz.jobStore.clusterCheckinInterval: 10000
+      org.quartz.threadPool.class: org.quartz.simpl.SimpleThreadPool
+      org.quartz.threadPool.threadCount: 10
+
+apigrab:
+  http:
+    # 是否跳过采集请求的 TLS 证书/主机名校验；内网自签证书场景可开启，公网接口勿开。
+    insecure-tls: ${INSECURE_TLS:true}
+
+# MyBatis 配置
+mybatis:
+  mapper-locations: classpath:mapper/*.xml,classpath*:com/gitee/apigrab/persistence/mapper/*.xml
+  type-aliases-package: com.gitee.apigrab.persistence.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+# PageHelper 分页
+pagehelper:
+  helper-dialect: mysql
+  reasonable: true
+  support-methods-arguments: true
+
+# 日志配置
+logging:
+  level:
+    com.gitee.apigrab: INFO

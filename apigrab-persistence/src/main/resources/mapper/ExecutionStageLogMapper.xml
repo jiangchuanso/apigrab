@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.gitee.apigrab.persistence.mapper.ExecutionStageLogMapper">
+    <resultMap id="BaseResultMap" type="com.gitee.apigrab.persistence.entity.ExecutionStageLogEntity">
+        <id column="id" property="id"/>
+        <result column="execution_id" property="executionId"/>
+        <result column="stage" property="stage"/>
+        <result column="input_count" property="inputCount"/>
+        <result column="output_count" property="outputCount"/>
+        <result column="success_count" property="successCount"/>
+        <result column="fail_count" property="failCount"/>
+        <result column="cost_ms" property="costMs"/>
+        <result column="failure_samples" property="failureSamples" typeHandler="com.gitee.apigrab.persistence.handler.FailureSamplesTypeHandler"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <sql id="BaseColumns">
+        id, execution_id, stage, input_count, output_count, success_count,
+        fail_count, cost_ms, failure_samples, create_time
+    </sql>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO APIGRAB_EXECUTION_STAGE_LOG (execution_id, stage, input_count, output_count,
+            success_count, fail_count, cost_ms, failure_samples)
+        VALUES (#{executionId}, #{stage}, #{inputCount}, #{outputCount},
+            #{successCount}, #{failCount}, #{costMs},
+            #{failureSamples, typeHandler=com.gitee.apigrab.persistence.handler.FailureSamplesTypeHandler})
+    </insert>
+
+    <select id="selectByExecutionId" resultMap="BaseResultMap">
+        SELECT <include refid="BaseColumns"/> FROM APIGRAB_EXECUTION_STAGE_LOG
+        WHERE execution_id = #{executionId}
+        ORDER BY id ASC
+    </select>
+
+    <delete id="deleteByTaskId">
+        DELETE FROM APIGRAB_EXECUTION_STAGE_LOG
+        WHERE execution_id IN (
+            SELECT id FROM APIGRAB_EXECUTION_LOG WHERE task_id = #{taskId}
+        )
+    </delete>
+</mapper>

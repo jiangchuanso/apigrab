@@ -1,0 +1,35 @@
+services:
+  mysqldb:
+    container_name: apigrab_mysqldb
+    image: registry.cn-hangzhou.aliyuncs.com/inrgihc/mysql:5.7
+    volumes:
+      - "/data/mysql:/var/lib/mysql"
+    environment:
+      MYSQL_DATABASE: apigrab
+      MYSQL_USER: apigrab
+      MYSQL_PASSWORD: 123456
+      MYSQL_ROOT_PASSWORD: 123456
+      MYSQL_ROOT_HOST: '%'
+    healthcheck:
+      test: ["CMD", "mysql", "-uroot", "-p123456", "-e", "select 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 60
+      start_period: 30s
+  apigrab:
+    container_name: apigrab_webui
+    image: registry.cn-hangzhou.aliyuncs.com/inrgihc/apigrab:latest
+    environment:
+      DB_TYPE: mysql
+      MYSQLDB_HOST: apigrab_mysqldb
+      MYSQLDB_PORT: 3306
+      MYSQLDB_NAME: apigrab
+      MYSQLDB_USERNAME: apigrab
+      MYSQLDB_PASSWORD: 123456
+    volumes:
+      - ./logs:/apigrab-release/logs
+    ports:
+      - 5880:5880
+    depends_on:
+      mysqldb:
+        condition: service_healthy

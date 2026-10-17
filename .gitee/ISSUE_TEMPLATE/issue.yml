@@ -1,0 +1,47 @@
+name: BUG反馈、需求或问题咨询
+description: "请尽可能详细的描述问题，提供足够的上下文"
+body:
+  - type: dropdown
+    id: version
+    attributes:
+      label: apigrab版本
+      options:
+        - "1.0.0"
+        - "1.0.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: modify
+    attributes:
+      label: ISSUE类型
+      options:
+        - "BUG"
+        - "需求"
+        - "咨询"
+    validations:
+      required: true
+  - type: dropdown
+    id: modify
+    attributes:
+      label: 是否有二次开发
+      options:
+        - "是"
+        - "否"
+    validations:
+      required: true
+  - type: dropdown
+    id: modify
+    attributes:
+      label: 是否已为项目star
+      options:
+        - "是"
+        - "否"
+    validations:
+      required: true
+  - type: textarea
+    id: desired-solution
+    attributes:
+      label: 问题描述(已对项目star的提问会优先处理)
+      description: 详细描述问题:(1)对于BUG反馈，请提供相应截图和日志，对于有堆栈报错信息，请提供完整的堆栈信息，对于一句话反馈的BUG将会被无视而关闭;(2)对于需求，请尽量详细描述您的需求功能;
+    validations:
+      required: true

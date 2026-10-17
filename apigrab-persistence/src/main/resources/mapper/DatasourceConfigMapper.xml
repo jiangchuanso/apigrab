@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.gitee.apigrab.persistence.mapper.DatasourceConfigMapper">
+    <resultMap id="BaseResultMap" type="com.gitee.apigrab.persistence.entity.DatasourceConfigEntity">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="db_type" property="dbType"/>
+        <result column="db_version" property="dbVersion"/>
+        <result column="jdbc_url" property="jdbcUrl"/>
+        <result column="driver_class" property="driverClass"/>
+        <result column="driver_path" property="driverPath"/>
+        <result column="username" property="username"/>
+        <result column="password" property="password"/>
+        <result column="pool_max_size" property="poolMaxSize"/>
+        <result column="pool_min_idle" property="poolMinIdle"/>
+        <result column="conn_props" property="connProps" typeHandler="com.gitee.apigrab.persistence.handler.ObjectMapTypeHandler"/>
+        <result column="status" property="status" typeHandler="com.gitee.apigrab.persistence.handler.EnableStatusTypeHandler"/>
+        <result column="remark" property="remark"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="ref_count" property="refCount"/>
+    </resultMap>
+
+    <!-- 引用数由子查询聚合，避免服务层二次统计；别名 d 与子查询一致�?-->
+    <sql id="BaseColumns">
+        id, name, db_type, db_version, jdbc_url, driver_class, driver_path,
+        username, password, pool_max_size, pool_min_idle, conn_props,
+        status, remark, create_time, update_time,
+        (SELECT COUNT(*) FROM APIGRAB_COLLECT_TASK t WHERE t.datasource_id = d.id) AS ref_count
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="BaseColumns"/> FROM APIGRAB_DATASOURCE_CONFIG d WHERE id = #{id}
+    </select>
+
+    <!-- 名称唯一性判重专用：等值匹配（非 LIKE）。表已有 uk_name 唯一索引，
+         本查询用于在服务层给出可读提示，避免直接抛出数据库约束错误。
+         表使用 MySQL 默认排序规则（大小写不敏感），故天然忽略大小写。 -->
+    <select id="selectByName" resultMap="BaseResultMap">
+        SELECT <include refid="BaseColumns"/> FROM APIGRAB_DATASOURCE_CONFIG d WHERE name = #{name}
+    </select>
+
+    <select id="selectList" resultMap="BaseResultMap">
+        SELECT <include refid="BaseColumns"/> FROM APIGRAB_DATASOURCE_CONFIG d
+        <where>
+            <if test="name != null and name != ''">AND name LIKE CONCAT('%', #{name}, '%')</if>
+            <if test="dbType != null">AND db_type = #{dbType}</if>
+            <if test="status != null">AND status = #{status, typeHandler=com.gitee.apigrab.persistence.handler.EnableStatusTypeHandler}</if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO APIGRAB_DATASOURCE_CONFIG (name, db_type, db_version, jdbc_url, driver_class, driver_path,
+            username, password, pool_max_size, pool_min_idle, conn_props, status, remark)
+        VALUES (#{name}, #{dbType}, #{dbVersion}, #{jdbcUrl}, #{driverClass}, #{driverPath},
+            #{username}, #{password}, #{poolMaxSize}, #{poolMinIdle},
+            #{connProps, typeHandler=com.gitee.apigrab.persistence.handler.ObjectMapTypeHandler},
+            #{status, typeHandler=com.gitee.apigrab.persistence.handler.EnableStatusTypeHandler}, #{remark})
+    </insert>
+
+    <update id="updateById">
+        UPDATE APIGRAB_DATASOURCE_CONFIG
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="dbType != null">db_type = #{dbType},</if>
+            <if test="dbVersion != null">db_version = #{dbVersion},</if>
+            <if test="jdbcUrl != null">jdbc_url = #{jdbcUrl},</if>
+            <if test="driverClass != null">driver_class = #{driverClass},</if>
+            <if test="driverPath != null">driver_path = #{driverPath},</if>
+            <if test="username != null">username = #{username},</if>
+            <if test="password != null">password = #{password},</if>
+            <if test="poolMaxSize != null">pool_max_size = #{poolMaxSize},</if>
+            <if test="poolMinIdle != null">pool_min_idle = #{poolMinIdle},</if>
+            <if test="connProps != null">conn_props = #{connProps, typeHandler=com.gitee.apigrab.persistence.handler.ObjectMapTypeHandler},</if>
+            <if test="status != null">status = #{status, typeHandler=com.gitee.apigrab.persistence.handler.EnableStatusTypeHandler},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM APIGRAB_DATASOURCE_CONFIG WHERE id = #{id}
+    </delete>
+
+    <select id="selectEnabled" resultMap="BaseResultMap">
+        SELECT <include refid="BaseColumns"/> FROM APIGRAB_DATASOURCE_CONFIG d WHERE status = 1
+    </select>
+
+    <!-- 删除前引用判定：被采集任务引用的数据源不得删除（design C4） -->
+    <select id="countReferences" resultType="long">
+        SELECT COUNT(*) FROM APIGRAB_COLLECT_TASK WHERE datasource_id = #{id}
+    </select>
+</mapper>

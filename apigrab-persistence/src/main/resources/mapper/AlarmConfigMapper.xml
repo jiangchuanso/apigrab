@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.gitee.apigrab.persistence.mapper.AlarmConfigMapper">
+    <resultMap id="BaseResultMap" type="com.gitee.apigrab.persistence.entity.AlarmConfigEntity">
+        <id column="id" property="id"/>
+        <result column="status" property="status" typeHandler="com.gitee.apigrab.persistence.handler.EnableStatusTypeHandler"/>
+        <result column="endpoint" property="endpoint"/>
+        <result column="content_type" property="contentType"/>
+        <result column="input_template" property="inputTemplate"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="BaseColumns">
+        id, status, endpoint, content_type, input_template, create_time, update_time
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="BaseColumns"/> FROM APIGRAB_ALARM_CONFIG WHERE id = #{id}
+    </select>
+
+    <insert id="replace">
+        REPLACE INTO APIGRAB_ALARM_CONFIG (id, status, endpoint, content_type, input_template)
+        VALUES (#{id}, #{status, typeHandler=com.gitee.apigrab.persistence.handler.EnableStatusTypeHandler}, #{endpoint}, #{contentType}, #{inputTemplate})
+    </insert>
+
+    <update id="updateById">
+        UPDATE APIGRAB_ALARM_CONFIG
+        <set>
+            <if test="status != null">status = #{status, typeHandler=com.gitee.apigrab.persistence.handler.EnableStatusTypeHandler},</if>
+            <if test="endpoint != null">endpoint = #{endpoint},</if>
+            <if test="contentType != null">content_type = #{contentType},</if>
+            <if test="inputTemplate != null">input_template = #{inputTemplate},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+</mapper>

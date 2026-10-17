@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.gitee.apigrab.persistence.mapper.ExecutionLogMapper">
+    <resultMap id="BaseResultMap" type="com.gitee.apigrab.persistence.entity.ExecutionLogEntity">
+        <id column="id" property="id"/>
+        <result column="task_id" property="taskId"/>
+        <result column="task_name" property="taskName"/>
+        <result column="status" property="status"/>
+        <result column="start_time" property="startTime"/>
+        <result column="end_time" property="endTime"/>
+        <result column="total_records" property="totalRecords"/>
+        <result column="success_count" property="successCount"/>
+        <result column="fail_count" property="failCount"/>
+        <result column="error_msg" property="errorMsg"/>
+        <result column="cost_ms" property="costMs"/>
+        <result column="page_count" property="pageCount"/>
+        <result column="current_stage" property="currentStage"/>
+        <result column="processed_count" property="processedCount"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <sql id="BaseColumns">
+        id, task_id, status, start_time, end_time, total_records, success_count,
+        fail_count, error_msg, cost_ms, page_count, current_stage, processed_count,
+        updated_at, create_time
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="BaseColumns"/> FROM APIGRAB_EXECUTION_LOG WHERE id = #{id}
+    </select>
+
+    <select id="selectList" resultMap="BaseResultMap">
+        SELECT el.id, el.task_id, t.name AS task_name, el.status, el.start_time, el.end_time,
+               el.total_records, el.success_count, el.fail_count, el.error_msg, el.cost_ms,
+               el.page_count, el.current_stage, el.processed_count, el.updated_at, el.create_time
+        FROM APIGRAB_EXECUTION_LOG el
+        LEFT JOIN APIGRAB_COLLECT_TASK t ON el.task_id = t.id
+        <where>
+            <if test="taskId != null">AND el.task_id = #{taskId}</if>
+            <if test="taskName != null and taskName != ''">AND t.name LIKE CONCAT('%', #{taskName}, '%')</if>
+            <if test="status != null">AND el.status = #{status}</if>
+        </where>
+        ORDER BY el.id DESC
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO APIGRAB_EXECUTION_LOG (task_id, status, start_time, end_time, total_records,
+            success_count, fail_count, error_msg, cost_ms, page_count)
+        VALUES (#{taskId}, #{status}, #{startTime}, #{endTime}, #{totalRecords},
+            #{successCount}, #{failCount}, #{errorMsg}, #{costMs}, #{pageCount})
+    </insert>
+
+    <update id="updateById">
+        UPDATE APIGRAB_EXECUTION_LOG
+        <set>
+            <if test="status != null">status = #{status},</if>
+            <if test="endTime != null">end_time = #{endTime},</if>
+            <if test="totalRecords != null">total_records = #{totalRecords},</if>
+            <if test="successCount != null">success_count = #{successCount},</if>
+            <if test="failCount != null">fail_count = #{failCount},</if>
+            <if test="errorMsg != null">error_msg = #{errorMsg},</if>
+            <if test="costMs != null">cost_ms = #{costMs},</if>
+            <if test="pageCount != null">page_count = #{pageCount},</if>
+            <if test="currentStage != null">current_stage = #{currentStage},</if>
+            <if test="processedCount != null">processed_count = #{processedCount},</if>
+            <if test="updatedAt != null">updated_at = #{updatedAt},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteByTaskId">
+        DELETE FROM APIGRAB_EXECUTION_LOG WHERE task_id = #{taskId}
+    </delete>
+
+    <select id="countRunningByTaskId" resultType="long">
+        SELECT COUNT(*) FROM APIGRAB_EXECUTION_LOG
+        WHERE task_id = #{taskId} AND status = 'RUNNING'
+    </select>
+</mapper>

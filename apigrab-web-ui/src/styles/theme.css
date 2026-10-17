@@ -1,0 +1,341 @@
+/* ==========================================================================
+   ApiGrab - Global Theme
+   Design tokens + Element UI overrides + page-level conventions.
+   Imported after element-ui base CSS (see main.js).
+
+   Principles (see docs/current/design/ui-foundation.md):
+   - ONE brand hue. Element UI blue is the single primary; do not introduce a
+     second brand colour (the login page used to be purple, which clashed).
+   - Density with air: data-dense tables/toolbars, but consistent spacing
+     rhythm and generous hit targets on interactive rows.
+   - Every interactive element is keyboard reachable with a visible focus ring.
+   ========================================================================== */
+
+:root {
+  /* ---- Brand: single hue ------------------------------------------------ */
+  --rc-primary: #409eff;
+  --rc-primary-hover: #66b1ff;
+  --rc-primary-active: #3a8ee6;
+  --rc-primary-strong: #2f7ec9; /* gradient end / pressed emphasis */
+  --rc-primary-soft: #ecf5ff; /* tinted surface: selected rows, active nav */
+  --rc-primary-ring: rgba(64, 158, 255, 0.25);
+
+  /* ---- Semantic --------------------------------------------------------- */
+  --rc-success: #67c23a;
+  --rc-warning: #e6a23c;
+  --rc-danger: #f56c6c;
+  --rc-info: #909399;
+
+  /* ---- Surfaces & text -------------------------------------------------- */
+  --rc-bg: #f0f2f5;
+  --rc-surface: #ffffff;
+  --rc-surface-sunken: #fafbfc; /* card headers, table headers */
+  --rc-sidebar: #2b3648;
+  --rc-border: #e4e7ed;
+  --rc-border-strong: #dcdfe6;
+  --rc-text: #303133;
+  --rc-text-secondary: #606266;
+  --rc-text-muted: #909399;
+  --rc-text-placeholder: #a8abb2;
+
+  /* ---- Type scale ------------------------------------------------------- */
+  --rc-text-xs: 12px;
+  --rc-text-sm: 13px;
+  --rc-text-base: 14px;
+  --rc-text-lg: 16px;
+  --rc-text-xl: 20px;
+  --rc-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'PingFang SC', 'Microsoft YaHei', sans-serif;
+  /* Machine-readable values (JSONPath/XPath/expressions/scripts) */
+  --rc-font-mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, 'Courier New', monospace;
+
+  /* ---- Spacing scale (4px base) ----------------------------------------- */
+  --rc-space-1: 4px;
+  --rc-space-2: 8px;
+  --rc-space-3: 12px;
+  --rc-space-4: 16px;
+  --rc-space-5: 20px;
+  --rc-space-6: 24px;
+
+  /* ---- Radius / elevation / motion -------------------------------------- */
+  --rc-radius-sm: 4px;
+  --rc-radius: 8px;
+  --rc-radius-lg: 12px;
+  --rc-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --rc-shadow-raise: 0 6px 20px rgba(0, 0, 0, 0.08);
+  --rc-shadow-header: 0 1px 4px rgba(0, 0, 0, 0.03);
+  --rc-transition: 150ms ease;
+}
+
+/* ---- Base ---- */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  color: var(--rc-text);
+  background: var(--rc-bg);
+  font-family: var(--rc-font-sans);
+  font-size: var(--rc-text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  height: 100%;
+}
+
+/* Long identifiers/URLs must not blow up the layout */
+.rc-text-mono {
+  font-family: var(--rc-font-mono);
+  font-size: var(--rc-text-sm);
+}
+.rc-break-all {
+  word-break: break-all;
+}
+
+/* Subtle, consistent scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c0c4cc transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #c0c4cc;
+  border-radius: 8px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #a8abb2;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---- Accessibility: visible keyboard focus (never remove focus rings) ---- */
+:focus-visible {
+  outline: 2px solid var(--rc-primary);
+  outline-offset: 2px;
+  border-radius: var(--rc-radius-sm);
+}
+.el-button:focus-visible,
+.el-input__inner:focus-visible {
+  outline: 2px solid var(--rc-primary);
+  outline-offset: 1px;
+}
+/* Keyboard users should be able to see where they are inside tables */
+.el-table__body tr:focus-within {
+  background: var(--rc-primary-soft);
+}
+
+/* Clickable affordance */
+.el-menu-item,
+.el-dropdown-link,
+.el-pagination button,
+.el-pager li {
+  cursor: pointer;
+}
+
+/* ---- Card ---------------------------------------------------------------
+   The card header is laid out as a flex row so pages do not need
+   `style="float: right"` (which broke wrapping and alignment). Use
+   .rc-card-header / __title / __actions inside <div slot="header">. */
+.el-card {
+  border: 1px solid var(--rc-border);
+  border-radius: var(--rc-radius);
+  box-shadow: var(--rc-shadow-card);
+  transition: box-shadow var(--rc-transition);
+}
+.el-card__header {
+  padding: var(--rc-space-3) var(--rc-space-5);
+  border-bottom: 1px solid var(--rc-border);
+  font-weight: 600;
+  color: var(--rc-text);
+  background: var(--rc-surface-sunken);
+  border-radius: var(--rc-radius) var(--rc-radius) 0 0;
+}
+.el-card__body {
+  padding: var(--rc-space-5);
+}
+
+.rc-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--rc-space-3);
+  flex-wrap: wrap;
+}
+.rc-card-header__title {
+  font-size: var(--rc-text-lg);
+  font-weight: 600;
+  color: var(--rc-text);
+}
+.rc-card-header__actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--rc-space-2);
+  flex-wrap: wrap;
+}
+
+/* ---- Tables ---- */
+.el-table {
+  border-radius: var(--rc-radius-sm);
+}
+.el-table th.el-table__cell {
+  background: var(--rc-surface-sunken) !important;
+  color: var(--rc-text-secondary);
+  font-weight: 600;
+}
+.el-table--border,
+.el-table--group {
+  border-radius: var(--rc-radius-sm);
+  overflow: hidden;
+}
+/* Row hover: makes it obvious which row you are about to act on */
+.el-table__body tr:hover > td.el-table__cell {
+  background: var(--rc-primary-soft);
+}
+.el-table .cell {
+  line-height: 1.5;
+}
+
+/* ---- Buttons / inputs / selects ---- */
+.el-button {
+  border-radius: 6px;
+  transition: background-color var(--rc-transition), border-color var(--rc-transition),
+    color var(--rc-transition), box-shadow var(--rc-transition);
+}
+.el-button--primary {
+  box-shadow: 0 1px 2px var(--rc-primary-ring);
+}
+.el-input__inner,
+.el-textarea__inner,
+.el-select .el-input__inner {
+  border-radius: 6px;
+}
+.el-textarea__inner {
+  font-family: inherit;
+}
+
+/* ---- Dialog / message box ---- */
+.el-dialog {
+  border-radius: var(--rc-radius-lg);
+  box-shadow: var(--rc-shadow-raise);
+  overflow: hidden;
+}
+.el-dialog__header {
+  padding: var(--rc-space-4) var(--rc-space-5);
+  border-bottom: 1px solid var(--rc-border);
+}
+.el-dialog__body {
+  padding: var(--rc-space-5);
+}
+
+/* ---- Tags / dividers / empty ---- */
+.el-tag {
+  border-radius: var(--rc-radius-sm);
+}
+.el-divider__text {
+  color: var(--rc-text-secondary);
+  font-weight: 600;
+  background: #ffffff;
+}
+.el-empty {
+  padding: var(--rc-space-6) 0;
+}
+.el-empty__description p {
+  color: var(--rc-text-muted);
+  font-size: var(--rc-text-base);
+}
+
+/* ---- Form rhythm ---- */
+.el-form-item {
+  margin-bottom: var(--rc-space-4);
+}
+
+/* ---- Filter / toolbar conventions ---------------------------------------
+   A filter row that wraps instead of overflowing, with the action group kept
+   visually attached to the filters it applies to. */
+.rc-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rc-space-2) var(--rc-space-3);
+  margin-bottom: var(--rc-space-4);
+}
+/* Neutralise Element's inline-form spacing: the gap above handles rhythm,
+   and the label/control inside each item stay on one line. */
+.rc-filters .el-form-item,
+.rc-filters.el-form--inline .el-form-item {
+  margin: 0;
+}
+.rc-filters__actions {
+  margin-left: auto;
+  display: flex;
+  gap: var(--rc-space-2);
+}
+
+/* ---- Sidebar active indicator (App.vue sidebar) ----
+   Group titles (el-submenu__title) must share the same row metrics as plain
+   items so that every top-level icon lines up in one vertical column. */
+.rc-sidebar .el-menu-item,
+.rc-sidebar .el-submenu__title {
+  height: 48px;
+  line-height: 48px;
+  margin: 2px 8px;
+  border-radius: var(--rc-radius-sm);
+  transition: background-color var(--rc-transition), color var(--rc-transition);
+}
+.rc-sidebar .el-menu-item.is-active {
+  color: #fff !important;
+  background: linear-gradient(90deg, rgba(64, 158, 255, 0.32), rgba(64, 158, 255, 0.1)) !important;
+  box-shadow: inset 3px 0 0 var(--rc-primary);
+}
+.rc-sidebar .el-menu-item:hover:not(.is-active),
+.rc-sidebar .el-submenu__title:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+/* Pin the top-level icon column: plain items and group titles use the same
+   left padding, so their icons stack in a straight vertical line. */
+.rc-sidebar > .el-menu-item,
+.rc-sidebar > .el-submenu > .el-submenu__title {
+  padding-left: 20px !important;
+}
+
+/* ---- Page helper ---- */
+.rc-page-tip {
+  font-size: var(--rc-text-xs);
+  color: var(--rc-text-muted);
+}
+
+/* ---- Motion: respect reduced-motion preference ---- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---- Responsive: comfortable content on small screens ---- */
+@media (max-width: 768px) {
+  .el-main {
+    padding: var(--rc-space-3) !important;
+  }
+  .el-card__body {
+    padding: var(--rc-space-3);
+  }
+  .el-card__header {
+    padding: var(--rc-space-3);
+  }
+  .rc-filters__actions {
+    margin-left: 0;
+    width: 100%;
+  }
+}

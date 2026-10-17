@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.gitee.apigrab.persistence.mapper.UserTokenMapper">
+    <resultMap id="BaseResultMap" type="com.gitee.apigrab.persistence.entity.UserTokenEntity">
+        <id column="id" property="id"/>
+        <result column="token" property="token"/>
+        <result column="user_id" property="userId"/>
+        <result column="username" property="username"/>
+        <result column="create_time" property="createTime"/>
+        <result column="expire_time" property="expireTime"/>
+        <result column="last_access_time" property="lastAccessTime"/>
+    </resultMap>
+
+    <select id="selectByToken" resultMap="BaseResultMap">
+        SELECT id, token, user_id, username, create_time, expire_time, last_access_time
+        FROM APIGRAB_USER_TOKEN WHERE token = #{token}
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO APIGRAB_USER_TOKEN (token, user_id, username, expire_time, last_access_time)
+        VALUES (#{token}, #{userId}, #{username}, #{expireTime}, #{lastAccessTime})
+    </insert>
+
+    <delete id="deleteByToken">
+        DELETE FROM APIGRAB_USER_TOKEN WHERE token = #{token}
+    </delete>
+
+    <delete id="deleteByUserId">
+        DELETE FROM APIGRAB_USER_TOKEN WHERE user_id = #{userId}
+    </delete>
+
+    <update id="updateLastAccess">
+        UPDATE APIGRAB_USER_TOKEN SET last_access_time = #{lastAccessTime}, expire_time = #{expireTime} WHERE token = #{token}
+    </update>
+
+    <delete id="deleteExpired">
+        DELETE FROM APIGRAB_USER_TOKEN WHERE expire_time &lt; NOW()
+    </delete>
+</mapper>

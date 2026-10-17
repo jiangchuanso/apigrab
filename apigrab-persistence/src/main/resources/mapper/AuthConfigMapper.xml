@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.gitee.apigrab.persistence.mapper.AuthConfigMapper">
+    <resultMap id="BaseResultMap" type="com.gitee.apigrab.persistence.entity.AuthConfigEntity">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="auth_type" property="authType"/>
+        <result column="auth_config" property="authConfig" typeHandler="com.gitee.apigrab.persistence.handler.AuthConfigTypeHandler"/>
+        <result column="status" property="status" typeHandler="com.gitee.apigrab.persistence.handler.EnableStatusTypeHandler"/>
+        <result column="remark" property="remark"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="ref_count" property="refCount"/>
+    </resultMap>
+
+    <!-- 引用数由子查询聚合，避免服务层二次统计；别名 a 与子查询一致。 -->
+    <sql id="SelectColumns">
+        a.id, a.name, a.auth_type, a.auth_config, a.status, a.remark, a.create_time, a.update_time,
+        (SELECT COUNT(*) FROM APIGRAB_API_CONFIG c WHERE c.auth_config_id = a.id) AS ref_count
+    </sql>
+
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT <include refid="SelectColumns"/> FROM APIGRAB_AUTH_CONFIG a WHERE a.id = #{id}
+    </select>
+
+    <!-- 名称唯一性判重专用：等值匹配（非 LIKE）。表使用 MySQL 默认排序规则（大小写不敏感），
+         故天然忽略大小写，与服务层判重结论一致——不得改用 Java 层字符串比较。 -->
+    <select id="selectByName" resultMap="BaseResultMap">
+        SELECT <include refid="SelectColumns"/> FROM APIGRAB_AUTH_CONFIG a WHERE a.name = #{name}
+    </select>
+
+    <select id="selectList" resultMap="BaseResultMap">
+        SELECT <include refid="SelectColumns"/> FROM APIGRAB_AUTH_CONFIG a
+        <where>
+            <if test="name != null and name != ''">AND a.name LIKE CONCAT('%', #{name}, '%')</if>
+            <if test="authType != null">AND a.auth_type = #{authType}</if>
+            <if test="status != null">AND a.status = #{status, typeHandler=com.gitee.apigrab.persistence.handler.EnableStatusTypeHandler}</if>
+        </where>
+        ORDER BY a.id DESC
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO APIGRAB_AUTH_CONFIG (name, auth_type, auth_config, status, remark)
+        VALUES (#{name}, #{authType},
+            #{authConfig, typeHandler=com.gitee.apigrab.persistence.handler.AuthConfigTypeHandler},
+            #{status, typeHandler=com.gitee.apigrab.persistence.handler.EnableStatusTypeHandler}, #{remark})
+    </insert>
+
+    <update id="updateById">
+        UPDATE APIGRAB_AUTH_CONFIG
+        <set>
+            <if test="name != null">name = #{name},</if>
+            <if test="authType != null">auth_type = #{authType},</if>
+            <if test="authConfig != null">auth_config = #{authConfig, typeHandler=com.gitee.apigrab.persistence.handler.AuthConfigTypeHandler},</if>
+            <if test="status != null">status = #{status, typeHandler=com.gitee.apigrab.persistence.handler.EnableStatusTypeHandler},</if>
+            <if test="remark != null">remark = #{remark},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM APIGRAB_AUTH_CONFIG WHERE id = #{id}
+    </delete>
+
+    <select id="countReferences" resultType="long">
+        SELECT COUNT(*) FROM APIGRAB_API_CONFIG WHERE auth_config_id = #{id}
+    </select>
+</mapper>
