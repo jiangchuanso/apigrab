@@ -1,0 +1,75 @@
+name: Sync from Gitee
+
+# 手动触发（仍属“手工同步”）：在 Actions 页面点 Run workflow 即可把 gitee 上游合入本仓库 master
+on:
+  workflow_dispatch:
+    inputs:
+      gitee_ref:
+        description: '要同步的 gitee 分支（默认 master）'
+        required: false
+        default: 'master'
+
+permissions:
+  contents: write   # 推送合入结果到 origin
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (完整历史)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add gitee remote
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        run: |
+          if [ -n "$GITEE_TOKEN" ]; then
+            REMOTE="https://oauth2:${GITEE_TOKEN}@gitee.com/inrgihc/apigrab.git"
+          else
+            REMOTE="https://gitee.com/inrgihc/apigrab.git"
+          fi
+          git remote add gitee "$REMOTE" 2>/dev/null || git remote set-url gitee "$REMOTE"
+          git fetch gitee
+
+      # 首次为不相关历史，需要 --allow-unrelated-histories。
+      # 策略：自动合入 gitee 的代码更新；若仅 build-docker/apigrab/Dockerfile 冲突
+      # （gitee 用 aliyun 基础镜像，本 fork 已改为 eclipse-temurin），则保留本 fork 版本后提交；
+      # 若出现其它冲突则中止并上报，交由人工处理。
+      - name: Merge gitee into master
+        run: |
+          set -e
+          REF="gitee/${{ github.event.inputs.gitee_ref }}"
+          if git merge --allow-unrelated-histories "$REF"; then
+            echo "merge clean"
+          else
+            echo "merge produced conflicts:"
+            git diff --name-only --diff-filter=U
+            if git diff --name-only --diff-filter=U | grep -qx build-docker/apigrab/Dockerfile; then
+              git checkout --ours build-docker/apigrab/Dockerfile
+              git add build-docker/apigrab/Dockerfile
+              REMAINING=$(git diff --name-only --diff-filter=U)
+              if [ -z "$REMAINING" ]; then
+                git commit --no-edit
+                echo "resolved Dockerfile conflict (kept fork version), merge committed"
+              else
+                echo "unexpected remaining conflicts: $REMAINING"
+                git merge --abort
+                exit 1
+              fi
+            else
+              echo "conflict outside expected file; aborting"
+              git merge --abort
+              exit 1
+            fi
+          fi
+
+      - name: Push to origin
+        run: git push origin HEAD:master
