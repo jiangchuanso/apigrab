@@ -1,0 +1,83 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # 创建 GitHub Release
+  packages: write   # 推送镜像到 GHCR
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 8
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '8'
+          cache: maven
+
+      # 国内源加速：用阿里云 Maven 镜像替代默认中央仓库
+      - name: Build with Maven
+        run: mvn -B -s .github/maven/settings.xml clean package -Dmaven.test.skip=true
+
+      - name: Locate release tarball
+        id: tarball
+        run: |
+          TARBALL=$(ls target/apigrab-release-*.tar.gz | head -n1)
+          echo "path=$TARBALL" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$TARBALL")" >> "$GITHUB_OUTPUT"
+
+      - name: Upload tarball artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apigrab-release
+          path: ${{ steps.tarball.outputs.path }}
+          retention-days: 30
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 镜像 tag 取自推送的 tag（去掉前缀 v），如 v1.0.0 -> 1.0.0
+      - name: Set image version
+        id: ver
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      # 还原 build_and_push_image.sh 的镜像上下文组装步骤
+      - name: Prepare Docker build context
+        run: |
+          TARBALL="${{ steps.tarball.outputs.path }}"
+          EXTRACTED_DIR=$(tar -tzf "$TARBALL" | head -n1 | cut -d/ -f1)
+          echo "Extracted dir: $EXTRACTED_DIR"
+          rm -rf /tmp/ag && mkdir -p /tmp/ag
+          tar -xzf "$TARBALL" -C /tmp/ag
+          cp -r "/tmp/ag/$EXTRACTED_DIR/lib/"* build-docker/apigrab/apigrab-release/lib/
+          cd build-docker/apigrab
+          tar -zcvf apigrab-release.tar.gz apigrab-release/
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: build-docker/apigrab
+          push: true
+          tags: |
+            ghcr.io/jiangchuanso/apigrab:${{ steps.ver.outputs.version }}
+            ghcr.io/jiangchuanso/apigrab:latest
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.tarball.outputs.path }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
