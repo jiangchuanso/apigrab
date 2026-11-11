@@ -35,6 +35,16 @@ class SqlDialectTest {
     }
 
     @Test
+    void testPreviewSqlPerDialect() {
+        assertEquals("SELECT * FROM `t` LIMIT 10", SqlDialect.resolve(DbType.MYSQL).buildPreviewSql("`t`", 10));
+        assertEquals("SELECT * FROM \"t\" LIMIT 10", SqlDialect.resolve(DbType.POSTGRESQL).buildPreviewSql("\"t\"", 10));
+        assertEquals("SELECT * FROM \"t\" WHERE ROWNUM <= 10", SqlDialect.resolve(DbType.ORACLE).buildPreviewSql("\"t\"", 10));
+        assertEquals("SELECT TOP 10 * FROM [t]", SqlDialect.resolve(DbType.SQLSERVER).buildPreviewSql("[t]", 10));
+        assertEquals("SELECT * FROM `t` LIMIT 10",
+            SqlDialect.buildPreviewSql("`t`", 10, DbType.MYSQL));
+    }
+
+    @Test
     void testCatalogScopePerDialect() {
         assertTrue(SqlDialect.resolve(DbType.MYSQL).isCatalogScope());
         assertFalse(SqlDialect.resolve(DbType.POSTGRESQL).isCatalogScope());

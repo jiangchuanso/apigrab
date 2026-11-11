@@ -29,6 +29,11 @@ public class SqlServerDialectStrategy extends AbstractSqlDialectStrategy {
     }
 
     @Override
+    public String buildPreviewSql(String quotedTable, int limit) {
+        return "SELECT TOP " + limit + " * FROM " + quotedTable;
+    }
+
+    @Override
     protected String quoteSimple(String identifier) {
         if (!identifier.isEmpty() && identifier.charAt(0) == '[') {
             return identifier;

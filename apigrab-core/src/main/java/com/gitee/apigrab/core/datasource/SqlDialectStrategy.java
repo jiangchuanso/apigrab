@@ -51,4 +51,13 @@ public interface SqlDialectStrategy {
     /** Build the write SQL for a single batch. */
     String buildWriteSql(WriteMode writeMode, String table, List<String> columns,
                          List<String> mergeKeys, int rowCount);
+
+    /**
+     * Build a limited SELECT for data preview. {@code quotedTable} is already quoted by
+     * {@link #quote(String)}. The default is MySQL/PostgreSQL style; Oracle-like and
+     * SQL Server dialects override it.
+     */
+    default String buildPreviewSql(String quotedTable, int limit) {
+        return "SELECT * FROM " + quotedTable + " LIMIT " + limit;
+    }
 }

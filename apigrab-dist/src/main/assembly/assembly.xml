@@ -56,6 +56,16 @@
             </includes>
         </fileSet>
 
+        <!-- 外部 JDBC 驱动（国产数据库），不进入 lib/ 的 classpath，由 URLClassLoader 加载 -->
+        <fileSet>
+            <directory>${project.parent.basedir}/drivers</directory>
+            <outputDirectory>drivers</outputDirectory>
+            <includes>
+                <include>**/*.jar</include>
+            </includes>
+            <fileMode>0644</fileMode>
+        </fileSet>
+
         <!-- 创建空的 logs 目录 -->
         <fileSet>
             <directory>${project.basedir}</directory>

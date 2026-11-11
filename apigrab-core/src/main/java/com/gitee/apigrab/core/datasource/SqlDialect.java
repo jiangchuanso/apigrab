@@ -19,7 +19,16 @@ public final class SqlDialect {
         MYSQL,
         new PostgreSqlDialectStrategy(),
         new SqlServerDialectStrategy(),
-        new OracleDialectStrategy()
+        new OracleDialectStrategy(),
+        // 国产数据库：按宿主方言族复用 SQL 生成，只在必要处覆盖差异
+        new DmDialectStrategy(),
+        new KingbaseDialectStrategy(),
+        new OscarDialectStrategy(),
+        new Gbase8aDialectStrategy(),
+        new HighGoDialectStrategy(),
+        new OpenGaussDialectStrategy(),
+        new OceanbaseDialectStrategy(),
+        new UxdbDialectStrategy()
     );
 
     private SqlDialect() {
@@ -46,6 +55,11 @@ public final class SqlDialect {
     public static String buildWriteSql(DbType dbType, WriteMode writeMode, String table,
                                        List<String> columns, List<String> mergeKeys, int rowCount) {
         return resolve(dbType).buildWriteSql(writeMode, table, columns, mergeKeys, rowCount);
+    }
+
+    /** Build a limited preview SELECT using the dialect selected for {@code dbType}. */
+    public static String buildPreviewSql(String table, int limit, DbType dbType) {
+        return resolve(dbType).buildPreviewSql(table, limit);
     }
 
     /** Build a CREATE TABLE statement using the dialect selected for {@code dbType}, without a primary key. */

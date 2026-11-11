@@ -37,7 +37,7 @@ API Grab（接口数据采集入库系统）— 配置化 REST 接口采集/入�
 - Flyway 按激活的 Spring Profile 从 `classpath:db/mysql`（mysql 配置）或 `classpath:db/h2`（h2 配置）执行迁移（脚本 `V1_0_0__init_schema.sql`），历史表 `FLYWAY_SCHEMA_HISTORY`。
 - Quartz 用 JDBC JobStore 且 `initialize-schema: always`（表在元数据库自动创建），集群模式。
 - `apigrab.http.insecure-tls: true` 默认开启 → **所有**采集请求跳过 TLS 证书/主机名校验。这是为内网自签证书接口有意设置，勿当 bug “修复”。
-- 目标库（MySQL/Oracle/SQL Server/PostgreSQL）连接池在运行期按需动态创建，应用启动不依赖它们可达。
+- 目标库（MySQL/Oracle/SQL Server/PostgreSQL + 达梦/人大金仓/神通/GBase8A/瀚高/openGauss/OceanBase/UXDB）连接池在运行期按需动态创建，应用启动不依赖它们可达。国产驱动不进 Maven classpath，放在 `drivers/<类型名小写>/<版本>/*.jar`（由 `apigrab.datasource.drivers-path` 配置根目录），经数据源的 `driverPath` 用隔离 `URLClassLoader` 加载；类型清单以后端 `DbType` 枚举为准，前端由 `/api/datasource-meta/db-types` 与 `/drivers` 拉取。
 - 鉴权：除 `/api/auth/login` 外所有 `/api/**` 需 Bearer 令牌（`WebMvcConfig` + `AuthInterceptor`）。
 
 ## 前端打包

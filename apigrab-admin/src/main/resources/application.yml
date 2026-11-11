@@ -26,6 +26,10 @@ spring:
 apigrab:
   http:
     insecure-tls: true
+  datasource:
+    # 外部 JDBC 驱动目录（可逗号分隔多个），布局：drivers/<类型名小写>/<版本>/*.jar
+    # 国产数据库驱动不进 Maven classpath，由运行期 URLClassLoader 动态加载。
+    drivers-path: drivers
 
 # MyBatis 配置
 mybatis:

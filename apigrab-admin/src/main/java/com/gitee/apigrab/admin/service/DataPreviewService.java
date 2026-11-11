@@ -59,7 +59,8 @@ public class DataPreviewService {
         // 与入库侧一致：先拼出全限定名（schema.table），再按目标库约定加包裹符，
         // 例如 PostgreSQL/Oracle 得到 "schema"."table"，MySQL 得到 `schema`.`table`。
         String table = SqlDialect.quote(qualifiedTableName(task), dbType);
-        String sql = "SELECT * FROM " + table + " LIMIT " + effectiveLimit;
+        // 预览分页也走方言：Oracle / 达梦用 ROWNUM，SQL Server 用 TOP，其余用 LIMIT。
+        String sql = SqlDialect.resolve(dbType).buildPreviewSql(table, effectiveLimit);
 
         List<Map<String, Object>> rows = new ArrayList<>();
         try (Connection conn = dataSourceManager.getConnection(task.getDatasourceId());

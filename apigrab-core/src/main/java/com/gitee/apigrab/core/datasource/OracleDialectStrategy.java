@@ -35,6 +35,12 @@ public class OracleDialectStrategy extends AbstractSqlDialectStrategy {
     }
 
     @Override
+    public String buildPreviewSql(String quotedTable, int limit) {
+        // Oracle 11g 与达梦 DM 均支持 ROWNUM，不使用 12c 才有的 FETCH FIRST。
+        return "SELECT * FROM " + quotedTable + " WHERE ROWNUM <= " + limit;
+    }
+
+    @Override
     protected String quoteSimple(String identifier) {
         if (!identifier.isEmpty() && identifier.charAt(0) == '"') {
             return identifier;

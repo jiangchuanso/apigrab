@@ -25,6 +25,9 @@ apigrab:
   http:
     # 是否跳过采集请求的 TLS 证书/主机名校验；内网自签证书场景可开启，公网接口勿开。
     insecure-tls: ${INSECURE_TLS:true}
+  datasource:
+    # 外部 JDBC 驱动目录：drivers/<类型名小写>/<版本>/*.jar，国产库驱动由此动态加载
+    drivers-path: ${DRIVERS_PATH:drivers}
 
 # MyBatis 配置
 mybatis:

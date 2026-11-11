@@ -55,6 +55,7 @@ export default {
         ],
         dbType: [{ required: true, message: '请选择数据库类型', trigger: 'change' }],
         jdbcUrl: [{ required: true, message: '请输入 JDBC URL', trigger: 'blur' }],
+        driverClass: [{ required: true, message: '请输入 JDBC 驱动类', trigger: 'blur' }],
         username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
         password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
       }

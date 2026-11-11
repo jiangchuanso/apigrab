@@ -96,7 +96,11 @@ export default {
       this.loadList()
     },
     dbTypeTag(type) {
-      const map = { MYSQL: 'success', ORACLE: 'danger', SQLSERVER: 'warning', POSTGRESQL: 'primary' }
+      const map = {
+        MYSQL: 'success', ORACLE: 'danger', SQLSERVER: 'warning', POSTGRESQL: 'primary',
+        DM: 'danger', KINGBASE: 'primary', OSCAR: 'primary', GBASE8A: 'success',
+        HIGHGO: 'primary', OPENGAUSS: 'primary', OCEANBASE: 'success', UXDB: 'primary'
+      }
       return map[type] || 'info'
     }
   }

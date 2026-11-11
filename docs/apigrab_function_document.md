@@ -16,7 +16,7 @@ API Grab 是一套通用的「接口数据采集入库」平台。它通过配�
 
 - **配置化采集**：不写代码即可完成接口接入、分页拉取、字段映射与目标库写入。
 - **多认证适配**：支持无认证、Basic、Bearer、OAuth2、自定义 Header、账号密码换 Token 等多种认证方式，并支持认证配置在多接口间复用。
-- **多数据库写入**：运行期动态管理 MySQL / Oracle / SQL Server / PostgreSQL 目标数据源，支持自动建表与多写入模式。
+- **多数据库写入**：运行期动态管理 MySQL / Oracle / SQL Server / PostgreSQL 及达梦、人大金仓、神通、GBase8A、瀚高、openGauss、OceanBase、优炫 UXDB 等国产库目标数据源，支持自动建表与多写入模式。
 - **可观测执行**：采集过程分阶段记录进度、统计与失败样本，支持执行历史回溯与入库数据预览。
 - **稳定容错**：支持失败重试、执行超时、按批写入、分页节流、失败告警与部分成功统计。
 - **灵活转换**：支持字段映射与内置转换函数，并支持 Groovy 脚本完成复杂数据清洗与聚合。
@@ -64,16 +64,17 @@ API Grab 是一套通用的「接口数据采集入库」平台。它通过配�
 **功能点：**
 
 1. **数据源列表**：展示名称、数据库类型、JDBC URL、用户名、最大连接数、引用任务数；支持分页。
-2. **新增/编辑数据源**：配置名称、数据库类型、JDBC URL、驱动类（按类型自动填充）、数据库版本（Oracle 可见）、用户名、密码、连接池最大连接数、最小空闲数、备注。
-3. **数据库类型**：MySQL / Oracle / SQL Server / PostgreSQL，选择类型后自动填充标准驱动类，并给出对应的 JDBC URL 模板。
+2. **新增/编辑数据源**：配置名称、数据库类型、JDBC URL、驱动类（按类型自动填充）、数据库版本（Oracle / 国产库可见）、用户名、密码、外部驱动路径、连接池最大连接数、最小空闲数、备注。
+3. **数据库类型**：MySQL / Oracle / SQL Server / PostgreSQL，以及达梦 DM、人大金仓 KingbaseES、神通 Oscar、南大通用 GBase8A、瀚高 HighGo、openGauss、OceanBase、优炫 UXDB。清单由后端 `DbType` 枚举经 `/api/datasource-meta/db-types` 下发，选择类型后自动填充驱动类与 JDBC URL 模板，自动建表、写入、预览、探活、元数据查询均按方言族适配。
 4. **测试连接**：新增时可直接用当前表单值测试（无需先保存）；编辑时可测试已保存的数据源连接。
 5. **删除保护**：被任一采集任务引用的数据源不允许删除（列表中对引用数大于 0 的行禁用删除按钮并提示）。
 6. **元数据级联浏览**：按「库/模式 → 表/视图 → 列」层级获取目标库结构，供任务配置使用：
-   - 库/模式：MySQL 对应 database，PostgreSQL schema，Oracle 用户/模式，SQL Server schema；
+   - 库/模式：MySQL / GBase8A / OceanBase 对应 database，PostgreSQL 系国产库对应 schema，Oracle / 达梦对应用户/模式，SQL Server 对应 schema；
    - 表：返回表与视图；
    - 列：返回列名、类型、长度、是否可空、备注以及**是否为主键**。
 7. **连接池管理**：目标库连接池按需（首次使用）创建与缓存，配置变更或删除后失效并重建，应用启动不依赖任何目标库可达。
 8. **密码存储**：数据源密码加密存储，运行期解密使用。
+9. **外部驱动加载**：国产库驱动为厂商私有 jar，不进入 Maven classpath。按 `drivers/<类型名小写>/<版本>/*.jar` 放置后，由 `/api/datasource-meta/drivers` 扫描列出，数据源的 `driverPath`（单个 jar、目录或多个路径逗号分隔）指定的驱动经隔离 `URLClassLoader` 加载；同一版本目录下的多个 jar 一并加载，不同库/版本互不冲突。
 
 ### 2.3 认证配置管理
 
@@ -340,6 +341,8 @@ API Grab 是一套通用的「接口数据采集入库」平台。它通过配�
 ### 3.4 动态数据源与调度
 
 - **动态数据源**：目标库连接池在运行期按需创建、缓存、失效与重建，与元数据库分离；支持导出驱动类与 JDBC URL 模板。
+- **外部驱动**：国产库驱动按 `drivers/<类型名小写>/<版本>/*.jar` 放置，由 `DriverCatalog` 扫描、`URLClassLoader` 隔离加载；Hikari 通过 `ExternalDriverDataSource` 使用，不经 `DriverManager` 全局注册。
+- **方言族**：`SqlDialectStrategy` 按兼容族复用——达梦复用 Oracle 方言，人大金仓 / 神通 / 瀚高 / openGauss / 优炫复用 PostgreSQL 方言，GBase8A / OceanBase 复用 MySQL 方言；差异点（探活、元数据查询、长文本与布尔类型、预览分页）由各子类覆盖。
 - **任务调度**：基于 Quartz，调度信息持久化于元数据库（JDBC Job Store，支持集群）；定时任务按 Cron 触发，手动执行以异步后台方式运行。
 
 ### 3.5 技术栈
@@ -362,7 +365,7 @@ API Grab 是一套通用的「接口数据采集入库」平台。它通过配�
 | 工具 | Hutool / commons-lang3 | 5.8.26 / 3.12.0 | XML、加解密、通用工具 |
 | 构建 | Maven | 3.6+ | 多模块构建 |
 | 元数据库 | MySQL | 5.7+ | 存储系统配置与执行元数据 |
-| 目标数据库 | MySQL / Oracle / SQL Server / PostgreSQL | 对应 JDBC 驱动 | 运行期动态注册 |
+| 目标数据库 | MySQL / Oracle / SQL Server / PostgreSQL / 达梦 DM / 人大金仓 / 神通 Oscar / GBase8A / 瀚高 / openGauss / OceanBase / UXDB | 常用驱动内置，国产库驱动外置于 `drivers/` | 运行期动态注册，国产库驱动由 URLClassLoader 加载 |
 
 **前端**
 

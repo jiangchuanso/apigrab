@@ -16,7 +16,7 @@
 
 - **多数据库写入**
 
-运行期动态管理 MySQL / Oracle / SQL Server / PostgreSQL 目标数据源，支持自动建表、INSERT / MERGE / TRUNCATE_INSERT 多种写入模式。
+运行期动态管理 MySQL / Oracle / SQL Server / PostgreSQL 以及达梦、人大金仓、神通、GBase8A、瀚高、openGauss、OceanBase、优炫 UXDB 等国产库目标数据源，支持自动建表、INSERT / MERGE / TRUNCATE_INSERT 多种写入模式。
 
 - **可观测执行**
 
@@ -174,7 +174,31 @@ bin/startup.sh
 切换到 apigrab-release-X.X.X/bin/ 目录下，双击 startup.cmd 脚本文件即可启动
 ```
 
-### 4、WEB 使用
+### 4、国产数据库支持
+
+除 MySQL / Oracle / SQL Server / PostgreSQL 外，目标库还支持**达梦 DM、人大金仓 KingbaseES、神通 Oscar、南大通用 GBase8A、瀚高 HighGo、openGauss、OceanBase、优炫 UXDB**。
+
+国产数据库 JDBC 驱动是厂商私有 jar，**不随 Maven 依赖打包，也不进入 `lib/` 的 classpath**。请按同作者项目 `dbswitch` / `sqlrest` 的目录约定放置（本仓库已随附常用版本）：
+
+```
+drivers/
+├── dm/dm-8/DmJdbcDriver18.jar
+├── kingbase/kingbase-v8r3/… , kingbase/kingbase-v8r6/… , kingbase/kingbase-v9r1/…
+├── oscar/oscar-8/oscarJDBC8.jar
+├── gbase8a/gbase8a-8.6/… , gbase8a/gbase8a-9.5/…
+├── highgo/highgo-6.2.4/HgdbJdbc-6.2.4.jar
+├── opengauss/opengauss-3.0.0/… , opengauss/opengauss-5.0.0/…
+├── oceanbase/ob-2.4.3/oceanbase-client-2.4.3.jar
+└── uxdb/uxdb-2.1.2.4a/uxdbjdbc-2.1.2.3p.jre8.jar
+```
+
+- 驱动根目录由 `apigrab.datasource.drivers-path` 配置（默认 `drivers`，可逗号分隔多个；发行包中位于 `apigrab-release-*/drivers/`，容器可用 `DRIVERS_PATH` 覆盖）。类型目录名必须与枚举名小写一致，版本子目录名任意；同一版本目录下的多个 jar 会一起加载（例如金仓 V9 的 `bcprov` 依赖）。
+- 新增数据源时选择对应类型，表单自动填入驱动类与 JDBC URL 模板，并在「外部驱动」下拉中列出已扫描到的驱动包；选中即自动填写 `driverPath`。也可手工填写 jar 文件或其所在目录的绝对路径，多个用逗号分隔。
+- 驱动类由隔离的 `URLClassLoader` 实例化并交给 Hikari 的 `DataSource`，不注册到全局 `DriverManager`，不同库/版本的驱动不会互相冲突；运行中放入新 jar 后点「刷新驱动」即可重新扫描。
+- 方言按兼容族复用：达梦走 Oracle 系（DUAL / MERGE / ROWNUM），人大金仓 / 神通 / 瀚高 / openGauss / 优炫走 PostgreSQL 系，GBase8A / OceanBase（MySQL 模式）走 MySQL 系。OceanBase 的 Oracle 兼容模式租户请选用 `ORACLE` 类型配合 OceanBase 驱动。
+- 元数据库仍只支持 MySQL / H2，与目标库类型无关。
+
+### 5、WEB 使用
 
 ### 1、使用说明文档
 

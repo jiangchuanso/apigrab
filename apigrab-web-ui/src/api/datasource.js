@@ -39,3 +39,17 @@ export function getDatasourceTables(id, schema) {
 export function getDatasourceColumns(id, schema, tableName) {
   return request({ url: `/datasources/${id}/columns`, method: 'get', params: { schema, tableName } })
 }
+
+// 数据库类型清单由后端 DbType 枚举驱动
+export function getDbTypes() {
+  return request({ url: '/datasource-meta/db-types', method: 'get' })
+}
+
+// 外部驱动包清单由后端扫描 drivers/ 目录得到
+export function getDriverPackages() {
+  return request({ url: '/datasource-meta/drivers', method: 'get' })
+}
+
+export function refreshDriverPackages() {
+  return request({ url: '/datasource-meta/drivers/refresh', method: 'post' })
+}

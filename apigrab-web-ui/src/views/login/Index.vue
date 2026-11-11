@@ -158,7 +158,7 @@ export default {
           icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h11"/><path d="M13 4l4 3-4 3"/><path d="M20 17H9"/><path d="M11 14l-4 3 4 3"/></svg>'
         },
         {
-          text: '多数据源写入 · MySQL / Oracle / PostgreSQL / SQL Server',
+          text: '多数据源写入 · MySQL / Oracle / PostgreSQL / SQL Server / 达梦 / 金仓 / openGauss 等国产库',
           icon: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg>'
         },
         {

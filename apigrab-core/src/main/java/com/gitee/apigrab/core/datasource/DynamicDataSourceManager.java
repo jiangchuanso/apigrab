@@ -1,6 +1,5 @@
 package com.gitee.apigrab.core.datasource;
 
-import com.gitee.apigrab.persistence.entity.enums.DbType;
 import lombok.extern.slf4j.Slf4j;
 import com.gitee.apigrab.common.util.PasswordUtils;
 import com.gitee.apigrab.persistence.dao.DatasourceConfigDao;
@@ -16,10 +15,14 @@ import java.io.File;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.sql.Connection;
-import java.sql.Driver;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
@@ -76,7 +79,7 @@ public class DynamicDataSourceManager {
         try {
             // 临时试连：密码按明文处理（新建态表单为明文）
             ds = createHikariDataSource(config, false);
-            String testQuery = getTestQuery(config.getDbType());
+            String testQuery = SqlDialect.resolve(config.getDbType()).getTestQuery();
             try (Connection conn = ds.getConnection();
                  Statement stmt = conn.createStatement()) {
                 stmt.execute(testQuery);
@@ -105,7 +108,6 @@ public class DynamicDataSourceManager {
             ? "Collector-DS-" + config.getId()
             : "Collector-DS-test-" + System.nanoTime();
         hikariConfig.setPoolName(poolName);
-        hikariConfig.setJdbcUrl(config.getJdbcUrl());
         hikariConfig.setUsername(config.getUsername());
         hikariConfig.setPassword(decryptPassword ? PasswordUtils.decrypt(config.getPassword()) : config.getPassword());
         hikariConfig.setMaximumPoolSize(java.util.Optional.ofNullable(config.getPoolMaxSize()).orElse(10));
@@ -113,26 +115,27 @@ public class DynamicDataSourceManager {
         hikariConfig.setConnectionTimeout(30000L);
         hikariConfig.setIdleTimeout(600000L);
         hikariConfig.setMaxLifetime(1800000L);
-        hikariConfig.setConnectionTestQuery(getTestQuery(config.getDbType()));
+        // 探活 SQL 统一取方言，国产库中达梦等 Oracle 兼容库需要 FROM DUAL。
+        hikariConfig.setConnectionTestQuery(SqlDialect.resolve(config.getDbType()).getTestQuery());
 
+        String driverClass = resolveDriverClass(config);
         if (StringUtils.isNotBlank(config.getDriverPath())) {
-            // 使用外部 JDBC 驱动热加载
-            URLClassLoader classLoader = getOrCreateClassLoader(config.getDriverPath());
+            // 厂商私有驱动：隔离 ClassLoader 实例化 Driver，交给 Hikari 的 DataSource，
+            // 不走 setDriverClassName（父加载器看不到外部 jar 中的类）。
             try {
-                Driver driver = (Driver) classLoader.loadClass(config.getDriverClass()).newInstance();
-                hikariConfig.setDriverClassName(config.getDriverClass());
-            } catch (ClassNotFoundException e) {
-                throw new RuntimeException("JDBC driver class not found: " + config.getDriverClass()
-                    + " from path: " + config.getDriverPath() + ". Please check the JAR file exists.", e);
-            } catch (Exception e) {
+                URLClassLoader classLoader = getOrCreateClassLoader(config.getDriverPath());
+                hikariConfig.setDataSource(new ExternalDriverDataSource(
+                    classLoader, driverClass, config.getJdbcUrl(), toProperties(config.getConnProps())));
+            } catch (RuntimeException e) {
                 throw new RuntimeException("Failed to load JDBC driver from: " + config.getDriverPath(), e);
             }
-            log.info("Loaded JDBC driver from external path: {} (class={})", config.getDriverPath(), config.getDriverClass());
+            log.info("Loaded JDBC driver from external path: {} (class={})", config.getDriverPath(), driverClass);
         } else {
+            hikariConfig.setJdbcUrl(config.getJdbcUrl());
             try {
-                hikariConfig.setDriverClassName(config.getDriverClass());
+                hikariConfig.setDriverClassName(driverClass);
             } catch (RuntimeException e) {
-                throw new RuntimeException("JDBC driver not found: " + config.getDriverClass()
+                throw new RuntimeException("JDBC driver not found: " + driverClass
                     + ". Please either add the driver dependency or specify driverPath for hot-loading.", e);
             }
         }
@@ -140,34 +143,80 @@ public class DynamicDataSourceManager {
         return new HikariDataSource(hikariConfig);
     }
 
+    /** 表单未显式指定驱动类时，用 DbType 自带的默认驱动类兜底。 */
+    private String resolveDriverClass(DatasourceConfigEntity config) {
+        if (StringUtils.isNotBlank(config.getDriverClass())) {
+            return config.getDriverClass().trim();
+        }
+        if (config.getDbType() != null) {
+            return config.getDbType().getDriverClass();
+        }
+        throw new IllegalArgumentException("未指定 JDBC 驱动类，且无法由数据库类型推断");
+    }
+
+    private Properties toProperties(Map<String, Object> connProps) {
+        Properties properties = new Properties();
+        if (connProps != null) {
+            for (Map.Entry<String, Object> entry : connProps.entrySet()) {
+                if (entry.getKey() != null && entry.getValue() != null) {
+                    properties.setProperty(entry.getKey(), String.valueOf(entry.getValue()));
+                }
+            }
+        }
+        return properties;
+    }
+
     /**
-     * 获取或创建指定路径的 URLClassLoader，支持外部 JDBC 驱动热加载
+     * 获取或创建指定路径的 URLClassLoader，支持外部 JDBC 驱动热加载。
+     * 路径项可以是单个 jar，也可以是包含 jar 的目录（如 {@code drivers/dm/dm-8}）。
      */
     private URLClassLoader getOrCreateClassLoader(String driverPath) {
         return classLoaderMap.computeIfAbsent(driverPath, path -> {
             try {
-                String[] jarPaths = path.split(",");
-                URL[] urls = new URL[jarPaths.length];
-                for (int i = 0; i < jarPaths.length; i++) {
-                    File jarFile = new File(jarPaths[i].trim());
-                    urls[i] = jarFile.toURI().toURL();
-                    if (!jarFile.exists()) {
-                        log.warn("JDBC driver JAR not found: {}", jarPaths[i]);
+                List<URL> urls = new ArrayList<>();
+                for (String item : path.split(",")) {
+                    String trimmed = item.trim();
+                    if (trimmed.isEmpty()) {
+                        continue;
+                    }
+                    File file = new File(trimmed);
+                    if (!file.exists()) {
+                        log.warn("JDBC driver path not found: {}", trimmed);
+                        continue;
+                    }
+                    if (file.isDirectory()) {
+                        collectJars(file, urls);
+                    } else {
+                        urls.add(file.toURI().toURL());
                     }
                 }
-                URLClassLoader loader = new URLClassLoader(urls, Thread.currentThread().getContextClassLoader());
-                log.info("Created URLClassLoader for driver path: {}", path);
+                if (urls.isEmpty()) {
+                    throw new IllegalArgumentException("外部驱动路径下未找到任何 jar: " + path);
+                }
+                URLClassLoader loader = new URLClassLoader(
+                    urls.toArray(new URL[0]), Thread.currentThread().getContextClassLoader());
+                log.info("Created URLClassLoader for driver path: {} ({} jar)", path, urls.size());
                 return loader;
+            } catch (RuntimeException e) {
+                throw e;
             } catch (Exception e) {
                 throw new RuntimeException("Failed to create ClassLoader for driver path: " + path, e);
             }
         });
     }
 
-    private String getTestQuery(DbType dbType) {
-        if (dbType == DbType.ORACLE) {
-            return "SELECT 1 FROM DUAL";
+    private void collectJars(File directory, List<URL> urls) throws Exception {
+        File[] files = directory.listFiles();
+        if (files == null) {
+            return;
         }
-        return "SELECT 1";
+        Arrays.sort(files, Comparator.comparing(File::getName));
+        for (File file : files) {
+            if (file.isDirectory()) {
+                collectJars(file, urls);
+            } else if (file.getName().toLowerCase().endsWith(".jar")) {
+                urls.add(file.toURI().toURL());
+            }
+        }
     }
 }
